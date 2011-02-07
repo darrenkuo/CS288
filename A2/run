@@ -1,0 +1,52 @@
+#!/usr/bin/python
+
+from subprocess import Popen, PIPE
+from optparse import OptionParser
+from os.path import exists
+
+def run(cmd):
+   Popen(cmd.split()).communicate();
+
+if __name__ == '__main__':
+   parser = OptionParser()
+   parser.add_option('-m', '--mode', dest='mode', default=None)
+   parser.add_option('-b', '--build', action='store_true',
+                     dest='build', default=False)
+   parser.add_option('-c', '--clean', action='store_true',
+                     dest='clean', default=False)
+   parser.add_option('-p', '--print', action='store_true',
+                     dest='p', default=False)
+   parser.add_option('-n', '--number', dest='numtest', default=-1)
+   parser.add_option('-r', '--ram', dest='memory', default='2000')
+   
+   (options, args) = parser.parse_args()
+
+   if options.clean:
+      #Popen('unalias rm'.split()).communicate()
+      Popen('rm /tmp/*.serialize'.split()).communicate()
+
+   if options.build:
+      Popen(['ant', '-f', 'build_assign2.xml']).communicate()
+
+
+   PATH = '/tmp/data2'      
+   CMD = 'java -cp assign2.jar:assign2-submit.jar -server -mx%sm edu.berkeley.nlp.assignments.assign2.MtDecoderTester -path %s -decoderType %s'
+   if options.mode:
+      if not exists(PATH):
+         user = 'cs288'
+         password = 'supertrees'
+         dl_link = 'http://www.cs.berkeley.edu/~klein/cs288/sp11/restricted/data2.tar.gz'
+         CMD = 'wget --http-user=%s --http-password=%s %s --directory-prefix=%s' % (user, password, dl_link, '/tmp/')
+         run(CMD)
+
+         CMD = 'tar xvf /tmp/data2.tar.gz -C /tmp/'
+         run(CMD)
+
+      if not options.p:
+         CMD += ' -noprint'
+
+      if options.numtest != -1:
+         CMD += ' -maxNumTest %d' % int(options.numtest)
+
+      Popen((CMD % (options.memory, PATH, str(options.mode).upper()))
+            .split()).communicate()
